@@ -7,6 +7,8 @@ import (
 	config "productmanagerapi/config"
 	"productmanagerapi/models"
 	responseFormatter "productmanagerapi/responseFormatter"
+	"productmanagerapi/services"
+	"productmanagerapi/utils"
 	requestMethodValidator "productmanagerapi/utils"
 	"strings"
 
@@ -16,7 +18,6 @@ import (
 )
 
 var Login = func(w http.ResponseWriter, r *http.Request) {
-	// maka a structured server log that includes the request method and URL
 	fmt.Printf("Received %s request for %s\n", r.Method, r.URL.Path)
 
 	isValidMethod := requestMethodValidator.RequestMethodValidator(w, *r, http.MethodPost)
@@ -25,62 +26,37 @@ var Login = func(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("Processing user login...")
-	w.Header().Set("Content-Type", "application/json")
 
 	var userInfo struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&userInfo); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(responseFormatter.FormatResponse(http.StatusBadRequest, "Invalid request body", nil))
+		utils.ResponseWritter(w, http.StatusBadRequest, responseFormatter.FormatResponse(http.StatusBadRequest, "Invalid request body", nil))
 		fmt.Println("Invalid request body for login:", err)
 		return
-
 	}
+
 	username := userInfo.Username
 	password := userInfo.Password
 
 	if strings.TrimSpace(username) == "" || strings.TrimSpace(password) == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(responseFormatter.FormatResponse(http.StatusBadRequest, "Username and password are required", nil))
+		utils.ResponseWritter(w, http.StatusBadRequest, responseFormatter.FormatResponse(http.StatusBadRequest, "Username and password are required", nil))
 		return
 	}
 
-	var user models.User
-	result := config.Db.Where("username = ? ", username).First(&user)
+	tokenString, err, user := services.Login(username, password)
 
-	if result.Error != nil {
-		if result.Error.Error() == "record not found" {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(responseFormatter.FormatResponse(http.StatusUnauthorized, "Invalid username or password", nil))
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(responseFormatter.FormatResponse(http.StatusInternalServerError, "Error fetching user", nil))
-		}
-		return
-	}
-
-	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(responseFormatter.FormatResponse(http.StatusUnauthorized, "Invalid username or password", nil))
-		fmt.Println("Invalid username or password for user:", username)
-		return
-	}
-
-	// generate a token for the user
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":  user.ID,
-		"username": user.Username,
-		"email":    user.Email,
-		"role":     user.Role,
-	})
-
-	tokenString, err := token.SignedString([]byte(config.SECRET_KEY))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(responseFormatter.FormatResponse(http.StatusInternalServerError, "Error generating token", nil))
-		fmt.Println("Error generating token for user:", username, "Error:", err)
+		if err.Error() == "invalid username or password" {
+			utils.ResponseWritter(w, http.StatusUnauthorized, responseFormatter.FormatResponse(http.StatusUnauthorized, "Invalid username or password", nil))
+			fmt.Println("Invalid username or password for user:", username)
+			return
+		}
+
+		utils.ResponseWritter(w, http.StatusInternalServerError, responseFormatter.FormatResponse(http.StatusInternalServerError, "Error logging in", nil))
+		fmt.Println("Error logging in for user:", username, "Error:", err)
 		return
 	}
 
@@ -94,14 +70,14 @@ var Login = func(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   3600, // 1 hour
 	})
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(responseFormatter.FormatResponse(http.StatusOK, "Login successful", map[string]interface{}{
+	utils.ResponseWritter(w, http.StatusOK, responseFormatter.FormatResponse(http.StatusOK, "Login successful", map[string]interface{}{
 		"user_id":      user.ID,
 		"username":     user.Username,
 		"email":        user.Email,
 		"role":         user.Role,
 		"access_token": tokenString,
 	}))
+
 	fmt.Println("User login successful")
 }
 

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"productmanagerapi/config"
 	responseFormatter "productmanagerapi/responseFormatter"
@@ -19,6 +20,18 @@ var RequestMethodValidator = func(w http.ResponseWriter, r http.Request, method 
 	}
 
 	return true
+}
+
+var ResponseWritter = func(w http.ResponseWriter, statusCode int, response map[string]interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(response)
+}
+
+var Log = func(r *http.Request, resource string) {
+	fmt.Printf("Received %s request for %s\n", r.Method, r.URL.Path)
+	fmt.Println(resource)
+
 }
 
 var IsValidToken = func(token string) bool {
