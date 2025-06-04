@@ -155,3 +155,63 @@ var HomeController = func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(responseFormatter.FormatResponse(http.StatusOK, "Welcome to the Product Manager API", nil))
 }
+
+var RefreshToken = func(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse and validate existing token
+	token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.SECRET_KEY), nil
+	})
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+
+	// Create a new token with same claims and new expiration
+	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id":  claims["user_id"],
+		"username": claims["username"],
+		"email":    claims["email"],
+		"role":     claims["role"],
+	})
+
+	tokenString, err := newToken.SignedString([]byte(config.SECRET_KEY))
+	if err != nil {
+		http.Error(w, "Failed to refresh", http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		HttpOnly: true,
+		Secure:   false,
+		Path:     "/",
+		MaxAge:   3600,
+	})
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Token refreshed",
+	})
+}
+
+var Logout = func(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/",
+	})
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(responseFormatter.FormatResponse(http.StatusOK, "Logged out successfully", nil))
+	fmt.Println("User logged out successfully")
+}
