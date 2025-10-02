@@ -294,15 +294,29 @@ productmanagerapi/
 
 ## 🤝 Contributing
 
-Contributions are welcome! If you'd like to contribute to the `productmanagerapi` project, please follow these steps:
+We welcome contributions to the Product Manager API! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for detailed guidelines on how to contribute to this project.
 
-1. Fork the repository.
-2. Create a new branch: `git checkout -b feature/your-feature-name`.
-3. Make your changes and commit them: `git commit -m 'Add your feature'`.
-4. Push to the branch: `git push origin feature/your-feature-name`.
-5. Open a pull request.
+### Quick Start for Contributors
 
-Please ensure your code adheres to the existing coding standards and includes appropriate tests.
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Make your changes** following our coding standards
+4. **Test your changes** thoroughly
+5. **Commit using conventional commits**: `git commit -m "feat: add amazing feature"`
+6. **Push to your fork**: `git push origin feature/amazing-feature`
+7. **Open a Pull Request**
+
+### What You Can Contribute
+
+* 🐛 **Bug fixes**
+* ✨ **New features**
+* 📚 **Documentation improvements**
+* 🧪 **Tests**
+* 🎨 **Code quality improvements**
+
+For detailed information about our development process, coding standards, and pull request guidelines, please read our [Contributing Guide](CONTRIBUTING.md).
+
+Thank you for contributing to Product Manager API! 🚀
 
 ---
 
